@@ -49,7 +49,7 @@ FROM book;
 */
 
 SELECT title, amount,
-     amount * 1.65 AS pack 
+    amount * 1.65 AS pack 
 FROM book;
 
 ------------------------------------------------------
@@ -1331,6 +1331,106 @@ where name_client = 'Попов Илья'
 
 select * from buy;
 -----------------------------------------------------------------------------------------------------------------------
+/*
+В таблицу buy_book добавить заказ с номером 5. Этот заказ должен содержать книгу Пастернака «Лирика» в количестве 
+двух экземпляров и книгу Булгакова «Белая гвардия» в одном экземпляре.
+*/
+
+insert into buy_book (buy_id, book_id, amount)
+select 5, book_id, 2
+from buy_book 
+    inner join book using(book_id)
+    inner join author using(author_id)
+where title='Лирика' and name_author like 'Пастернак%'
+;
+
+
+insert into buy_book (buy_id, book_id, amount)
+select 5, book_id, 1
+from buy_book 
+    inner join book using(book_id)
+    inner join author using(author_id)
+where title='Белая Гвардия' and name_author like 'Булгаков%'
+;
+
+select * from buy_book;
+
+------------------------------------------------------------------------------------------------------------------------
+/*
+Количество тех книг на складе, которые были включены в заказ с номером 5, уменьшить на то количество, 
+которое в заказе с номером 5  указано.
+*/
+
+update buy_book, book
+set book.amount = book.amount - buy_book.amount
+where buy_book.buy_id = 5 and book.book_id = buy_book.book_id
+;
+
+select * from book;
+------------------------------------------------------------------------------------------------------------------------
+/*
+Создать счет (таблицу buy_pay) на оплату заказа с номером 5, в который включить название книг, их автора, цену, 
+количество заказанных книг и  стоимость. Последний столбец назвать Стоимость. Информацию в таблицу занести в 
+отсортированном по названиям книг виде.
+*/
+
+create table buy_pay as
+select book.title, author.name_author, book.price, buy_book.amount, book.price*buy_book.amount as 'Стоимость'
+from buy_book 
+    inner join book using(book_id)
+    inner join author using(author_id)
+where buy_id = 5
+order by 1
+;
+
+select * from buy_pay;
+
+-----------------------------------------------------------------------------------------------------------------------
+/*
+Создать общий счет (таблицу buy_pay) на оплату заказа с номером 5. Куда включить номер заказа, количество книг в заказе 
+(название столбца Количество) и его общую стоимость (название столбца Итого). Для решения используйте ОДИН запрос.
+*/
+
+create table buy_pay as
+select buy_id, sum(buy_book.amount) as Количество, sum(book.price*buy_book.amount) as Итого
+from buy_book 
+    inner join book using(book_id)
+    inner join author using(author_id)
+where buy_id = 5
+order by 1
+;
+
+select * from buy_pay;
+-----------------------------------------------------------------------------------------------------------------------
+/*
+В таблицу buy_step для заказа с номером 5 включить все этапы из таблицы step, которые должен пройти этот заказ. 
+В столбцы date_step_beg и date_step_end всех записей занести Null.
+*/
+
+insert into buy_step(buy_id, step_id, date_step_beg, date_step_end)
+select buy_id, step_id, null, null
+from buy
+cross join step
+where buy_id = 5
+;
+------------------------------------------------------------------------------------------------------------------------
+/*
+В таблицу buy_step занести дату 12.04.2020 выставления счета на оплату заказа с номером 5.
+
+Правильнее было бы занести не конкретную, а текущую дату. Это можно сделать с помощью функции Now(). 
+Но при этом в разные дни будут вставляться разная дата, и задание нельзя будет проверить, поэтому  вставим дату 12.04.2020.
+*/
+update buy_step
+set date_step_beg = '2020-04-12'
+where buy_id = 5 and step_id = 1
+;
+
+select * from buy_step;
+-------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 
 
 
