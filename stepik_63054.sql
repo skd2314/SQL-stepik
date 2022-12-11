@@ -136,7 +136,7 @@ ORDER BY title ASC;
 
 
 INSERT INTO book (title, author, price, amount) 
-VALUES ("Империя должна умереть", "Загарь М.В.", "999", 666);
+VALUES ("Империя должна умереть", "Зыгарь М.В.", "999", 666);
 
 SELECT title, author, price, amount,
 	amount * price AS total
@@ -1590,6 +1590,125 @@ group by 1, 2, 3
 order by 1, 3 desc
 ;
 ----------------------------------------------------------------------------------------------------------------------------
+/*
+Для каждого вопроса вывести процент успешных решений, то есть отношение количества верных ответов к общему количеству 
+ответов, значение округлить до 2-х знаков после запятой. Также вывести название предмета, к которому относится вопрос, 
+и общее количество ответов на этот вопрос. В результат включить название дисциплины, вопросы по ней (столбец назвать Вопрос), 
+а также два вычисляемых столбца Всего_ответов и Успешность. Информацию отсортировать сначала по названию дисциплины, потом 
+по убыванию успешности, а потом по тексту вопроса в алфавитном порядке.
+
+Поскольку тексты вопросов могут быть длинными, обрезать их 30 символов и добавить многоточие "...".
+*/
+
+select name_subject,
+        concat(left(name_question, 30), '...') as Вопрос,
+        count(answer_id) as Всего_ответов,
+        round((sum(is_correct) / count(answer_id)) * 100, 2) as Успешность
+from testing
+    inner join question using (question_id)
+    inner join answer using (answer_id)
+    left join subject using (subject_id) 
+group by 1, 2 
+order by 1, 4 desc, 2
+;
+----------------------------------------------------------------------------------------------------------------------------
+/*
+Придумайте один или несколько запросов на выборку для предметной области «Тестирование» (в таблицы занесены данные, как 
+на первом шаге урока). Проверьте, правильно ли они работают.
+*/
+
+select student.name_student as 'Студент',
+    subject.name_subject as 'Курс',
+    attempt.date_attempt as 'Дата_попытки',
+    attempt.result as 'MAX_Оценка'
+from attempt
+    inner join student using(student_id)
+    inner join subject using(subject_id)
+where result = (select max(result) from attempt)
+order by 1
+;
+
+select student.name_student as 'Студент',
+    concat(left(answer.name_answer, 20), '...') as 'Ответ',
+    answer.question_id as 'Вопрос_id',
+    answer.is_correct as 'Оценка'
+    
+from student
+    inner join attempt using (student_id)
+    inner join testing using (attempt_id)
+    inner join answer using (answer_id) 
+where answer.is_correct = 1
+group by 1, 2, 3
+order by 1
+;
+
+select avg(attempt.result) as 'Средняя_оценка'
+from attempt
+;
+-----------------------------------------------------------------------------------------------------------------------------
+
+/*
+В таблицу attempt включить новую попытку для студента Баранова Павла по дисциплине «Основы баз данных». Установить текущую 
+дату в качестве даты выполнения попытки.
+*/
+
+insert into attempt(student_id, subject_id, date_attempt, result)
+select student.student_id, subject.subject_id, now(), null
+from student, subject
+where name_student = 'Баранов Павел'and name_subject = 'Основы баз данных'
+;
+
+select * from attempt
+;
+-----------------------------------------------------------------------------------------------------------------------------
+/*
+Случайным образом выбрать три вопроса (запрос) по дисциплине, тестирование по которой собирается проходить студент, 
+занесенный в таблицу attempt последним, и добавить их в таблицу testing. id последней попытки получить как максимальное 
+значение id из таблицы attempt.
+*/
+
+insert into testing(attempt_id, question_id)
+select attempt_id, question_id
+from question 
+    inner join attempt using(subject_id)
+where attempt_id = (select max(attempt_id) from attempt)
+order by rand()
+limit 3
+;
+select * from testing;
+------------------------------------------------------------------------------------------------------------------------------
+/*
+Студент прошел тестирование (то есть все его ответы занесены в таблицу testing), далее необходимо вычислить результат(запрос) 
+и занести его в таблицу attempt для соответствующей попытки.  Результат попытки вычислить как количество правильных ответов, 
+деленное на 3 (количество вопросов в каждой попытке) и умноженное на 100. Результат округлить до целого.
+
+ Будем считать, что мы знаем id попытки,  для которой вычисляется результат, в нашем случае это 8. В таблицу testing занесены 
+ следующие ответы пользователя:
+*/
+
+update attempt 
+set result = (select round((sum(is_correct)/3) * 100, 2)
+            from answer
+            inner join testing on answer.answer_id= testing.answer_id
+            where testing.attempt_id = 8)
+where attempt.attempt_id = 8
+;
+select * from attempt;
+------------------------------------------------------------------------------------------------------------------------------
+/*
+Удалить из таблицы attempt все попытки, выполненные раньше 1 мая 2020 года. Также удалить и все соответствующие этим 
+попыткам вопросы из таблицы testing
+*/
+
+delete from attempt 
+where date_attempt < '2020-05-01'
+;
+select * from attempt;
+select * from testing;
+------------------------------------------------------------------------------------------------------------------------------
+
+
+
 
 
 
