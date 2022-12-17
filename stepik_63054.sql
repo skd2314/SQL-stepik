@@ -841,7 +841,7 @@ order by name_city, Дата desc
 */
 
 SELECT name_genre, title, name_author
-FROM
+FROMƒ
     author 
     INNER JOIN  book ON author.author_id = book.author_id
     INNER JOIN genre ON genre.genre_id = book.genre_id
